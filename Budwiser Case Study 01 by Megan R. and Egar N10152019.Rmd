@@ -4,6 +4,7 @@ author: "Edgar Nunez and Megan Riley"
 date: "10/5/2019"
 output: html_document
 ---
+<<<<<<< Updated upstream
 
 ```{r setup, warnings = FALSE, cache=TRUE}
 #Loading Libraries
@@ -19,14 +20,100 @@ BeersData = read_csv("Beers.csv")
 BreweriesData = read_csv("Breweries.csv")
 
 
+=======
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+install.packages("sqldf")
+library(sqldf)
+library(tidyverse)
+library(ggplot2)
+library(ggthemes)
+library(leaps)
+```
+
+# Support functions
+```{r support, echo=T}
+#Really handy predict function
+predict.regsubsets =function (object , newdata ,id ,...){
+  form=as.formula (object$call [[2]])
+  mat=model.matrix(form ,newdata )
+  coefi=coef(object ,id=id)
+  xvars=names(coefi)
+  mat[,xvars]%*%coefi
+}
+```
+
+#Load the data
+```{r}
+BeerWithBreweries = read.csv(file.choose(),header = TRUE)
+BeerWithBreweries
+BeersData = read.csv(file.choose(),header = TRUE)
+BeersData
+>>>>>>> Stashed changes
 ```
 
 ###Clean the data (listwise deletion of of observations when AVS is NA)
 ```{r}
+<<<<<<< Updated upstream
 #newdata <- na.omit(mydata)
+=======
+BeersData %>% select(Name,	Beer_ID,	ABV, IBU,	Brewery_id,	Style,	Ounces)
+Beersdf = data.frame(BeersData$Name,	BeersData$Beer_ID,	BeersData$ABV, BeersData$IBU,	BeersData$Brewery_id,	BeersData$Style,	BeersData$Ounces)
+Beersdf
+
+#Crete a data frame of counts of NA and finite values oneach column
+finite_count <- sapply(Beersdf, function(y) sum(length(which(is.finite(y)))))
+finite_count <- data.frame(finite_count)
+na_count <- sapply(Beersdf, function(y) sum(length(which(is.na(y)))))
+na_count <- data.frame(na_count, finite_count)
+na_count
+
+#Drop IBU column since it is not informative to the end user
+NOIBUBeerdf = data.frame(BeersData %>% select(Name,	Beer_ID, ABV, Brewery_id,	Style,	Ounces)) 
+
+NOIBUBeerdf <- NOIBUBeerdf %>% filter(complete.cases(.))
+NOIBUBeerdf
+
+cfinite_count <-sapply(NOIBUBeerdf, function(y) sum(length(which(is.finite(y)))))
+cfinite_count <- data.frame(cfinite_count)
+cna_count <- sapply(NOIBUBeerdf, function(y) sum(length(which(is.na(y)))))
+cna_count <- data.frame(cna_count, cfinite_count)
+cna_count
+
+hist(BeersData$ABV)
+hist(NOIBUBeerdf$ABV)
+
+plot(BeersData$ABV)
+plot(NOIBUBeerdf$ABV)
+
+BeersData1 <- sqldf("SELECT * FROM BeersData WHERE BeersData.ABV != 'NA' and BeersData.IBU != 'NA'")
+BeersData1
+>>>>>>> Stashed changes
 
 ```
+## Explore and find insights (EDA)
+## The first order of business once we have a clean data set is to discover what we can about this data.  We use exploratory data analysis for this purpose.
+```{r eda, include=TRUE}
+# Look at some possible associations between variables
+ggplot(BeersData, aes(x = ABV, y = IBU)) +
+  geom_point () +
+  geom_smooth () +
+  labs (
+    title = "ABV and IBU relationship",
+    subtitle = "Strong Positive Correlation - Needs Transformation",
+    x = "ABV",
+    y = "IBU")
 
+ggplot(BeersData, aes(x = Style, y = IBU)) +
+  geom_point () +
+  geom_smooth () +
+  labs (
+    title = "ABV and IBU relationship",
+    subtitle = "No apparent Correlation",
+    x = "Style",
+    y = "IBU")
+
+<<<<<<< Updated upstream
 
 Below are the first passes at running the analysis for the EDA.  
 
@@ -226,6 +313,78 @@ BeersData %>% ggplot(aes(x = ABV, y = IBU, color = as.factor(Ounces))) + geom_po
 
 
 ```
+=======
+ggplot(BeersData, aes(x = Brewery_id, y = IBU)) +
+  geom_point () +
+  geom_smooth () +
+  labs (
+    title = "ABV and IBU relationship",
+    subtitle = "Low linear Correlation - No Transformation required",
+    x = "Brewery_id",
+    y = "IBU")
 
+ggplot(BeersData, aes(x = Beer_ID, y = IBU)) +
+  geom_point () +
+  geom_smooth () +
+  labs (
+    title = "ABV and IBU relationship",
+    subtitle = "Low Correlation - Needs Transformation",
+    x = "Beer_ID",
+    y = "IBU")
+
+ggplot(BeersData, aes(x = Ounces, y = IBU)) +
+  geom_point () +
+  geom_smooth () +
+  labs (
+    title = "ABV and IBU relationship",
+    subtitle = "No apparent Correlation",
+    x = "Ounces",
+    y = "IBU")
+
+ggplot(BeersData, aes(x = Name, y = IBU)) +
+  geom_point () +
+  geom_smooth () +
+  labs (
+    title = "ABV and IBU relationship",
+    subtitle = "No apparent Correlation",
+    x = "Name",
+    y = "IBU")
+
+```
+#Create a linear model
+```{r}
+lmibu = lm(BeersData$IBU ~BeersData$ABV + BeersData$Brewery_id, data = BeersData1)
+summary(lmibu)
+```
+
+### Based on this analysis,IBU seems to be related to the ABV and the beers Brewery.  We can use these variables for a multiple regression. 
+
+### To address the Missing Values in each Column we chose to impute the NA value with the median of the existing variables, because IBU showed a strong positive correlation with BVA. However, the correlatio neeced transformation different than logarith or squared root.
+```{r include=TRUE}
+MedianABV = BeerWithBreweries %>% group_by(State) %>% summarise(MedABV = median(BeersData$ABV, na.rm = TRUE))
+MedianABV %>% ggplot(aes(x = State, y = MedABV)) + geom_bar(stat = "identity", fill = "light green") +
+  ylab("Median ABV") + ggtitle("Median Beer ABV by State") + theme_clean()
+MedianIBU = BeerWithBreweries %>% group_by(State) %>% summarise(MedIBU = median(BeersData$IBU, na.rm = TRUE))
+MedianIBU %>% ggplot(aes(x = State, y = MedIBU)) + geom_bar(stat = "identity", fill = "light blue")+
+  ylab("Median State IBU") + ggtitle("Median Beer IBU by State") + theme_clean()
+
+
+#Calculate the Median for IBU and BVA
+Medean.IBU <- median(BeersData$IBU, na.rm = TRUE)
+Median.ABV <- median(BeersData$ABV, na.rm = TRUE) 
+
+#Replace the NAs with the respective Medians
+BeersData$IBU[is.na(BeersData)]=Medean.IBU
+BeersData$ABV[is.na(BeersData$ABV)]=Median.ABV 
+
+#Verify NAs have been replaced
+Beersdf1 <- data.frame(BeersData %>% filter(is.na(IBU)))
+Beersdf1
+Beersdf.ABV_NA <- data.frame(BeersData %>% filter(is.na(ABV)))
+Beersdf.ABV_NA
+
+BeersData
+
+```
 
 >>>>>>> Stashed changes
