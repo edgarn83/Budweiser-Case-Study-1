@@ -75,7 +75,7 @@ BeersData1
 # Look at some possible associations between variables
 ggplot(BeersData, aes(x = ABV, y = IBU)) +
   geom_point () +
-  geom_smooth () +
+  geom_smooth (method='lm') +
   labs (
     title = "ABV and IBU relationship",
     subtitle = "Strong Positive Correlation - Needs Transformation",
@@ -130,11 +130,11 @@ ggplot(BeersData, aes(x = Name, y = IBU)) +
 ```
 #Create a linear model
 ```{r}
-lmibu = lm(BeersData$IBU ~BeersData$ABV + BeersData$Brewery_id, data = BeersData1)
+lmibu = lm(BeersData$IBU ~BeersData$ABV, data = BeersData1)
 summary(lmibu)
 ```
 
-### Based on this analysis,IBU seems to be related to the ABV and the beers Brewery.  We can use these variables for a multiple regression. 
+### Based on this analysis,IBU seems to be related to the ABV.
 
 ### To address the Missing Values in each Column we chose to impute the NA value with the median of the existing variables, because IBU showed a strong positive correlation with BVA. However, the correlatio neeced transformation different than logarith or squared root.
 ```{r include=TRUE}
