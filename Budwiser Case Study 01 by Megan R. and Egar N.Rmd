@@ -8,8 +8,11 @@ output: html_document
 ```{r setup, warnings = FALSE, cache=TRUE}
 knitr::opts_chunk$set(echo = TRUE)
 install.packages("sqldf")
+install.packages("stringr")
+
 
 #Loading Libraries
+library(stringr)
 library(sqldf)
 library(tidyverse)
 library(ggplot2)
@@ -111,6 +114,38 @@ ggplot(BeersData, aes(x = Name, y = IBU)) +
 
 ### To address the Missing Values in each Column we chose to impute the NA value with the median of the existing variables, because IBU showed a strong positive correlation with BVA.
 
+###Analysis Question Three
+The Missing Values are addressed before any additional data manipulation takes place so work does not have to be redone.
+
+```{r warnings = FALSE}
+#Address the Missing Values in Each Column
+#Copy Made to compare differences after Imputation
+BeersCopy = BeersData
+#Replace the NAs with the respective Medians
+MedianIBU <- median(BeersData$IBU, na.rm = TRUE)
+MedianABV <- median(BeersData$ABV, na.rm = TRUE) 
+#Replace IBU
+NAIndicesIBU = which(is.na(BeersData$IBU))
+for(i in NAIndicesIBU){
+  BeersData$IBU[i] = MedianIBU
+}
+#ReplaceABV
+NAIndicesABV = which(is.na(BeersData$ABV))
+for(i in NAIndicesABV){
+  BeersData$ABV[i] = MedianABV
+}
+#Example of replacing values with regression model
+BeersTemp = BeersCopy
+#this is an unimputed data set
+lmibu = lm(BeersTemp$IBU ~BeersTemp$ABV, data = BeersTemp)
+predicted = predict(lmibu, BeersTemp)
+NaTempIndices = which(is.na(BeersTemp$IBU))
+for(i in NaTempIndices){
+  BeersTemp$IBU[i] = predicted[i]
+}
+```
+
+
 ```{r warnings = FALSE}
 #Address the Missing Values in Each Column
 
@@ -156,8 +191,6 @@ Beersdf1 <- data.frame(BeersData %>% filter(is.na(IBU)))
 Beersdf1
 Beersdf.ABV_NA <- data.frame(BeersData %>% filter(is.na(ABV)))
 Beersdf.ABV_NA
-
-BeersData
 
 ```
 
@@ -207,4 +240,70 @@ BeersData %>% ggplot(aes(x = ABV, y = IBU, color = as.factor(Ounces))) + geom_po
   ggtitle("Beer IBU by ABV colored by Ounces")
 
 ```
+
+
+### Answerto question eight
+```{r}
+table(BeersData$Style)
+BeersData %>% select(Name, Beer_ID, ABV, IBU, Brewery_id, Style, Ounces) %>% 
+filter(str_detect(Style, "India Pale Ale"))
+
+BeersData %>% select(Name, Beer_ID, ABV, IBU, Brewery_id, Style, Ounces) %>% 
+filter(str_detect(Style, "IPA"))
+
+BeersData %>% select(Name, Beer_ID, ABV, IBU, Brewery_id, Style, Ounces) %>% 
+dplyr::filter(!str_detect(Style, "IPA"))
+
+set.seed(9850)
+gp <- runif(nrow(BeersData))
+head(BeersData)
+BeersData <- BeersData[order(gp),] #Scramble the beers n the data set
+
+BeersData$Style <- as.factor(BeersData$Style)
+str(BeersData)
+summary(BeersData[, c(1, 2, 3, 4, 5)])
+
+#Normalize numeric features (variable) to have similar scale
+normalize <- function(x) (x - min(x))/(max(x)-min(x))
+normalize(BeersData[, 2:5])
+
+BeersData_norm <- as.data.frame(lapply(BeersData[,c(2,3,4,5)], normalize))
+BeersData_norm$Style <- BeersData$Style
+str(BeersData_norm)
+summary(BeersData_norm)
+
+#Create training and test data sets with 70:30 split
+#Training data set uses rows 1 - 1687 from the normalized dataset and all the columns for the train dataset
+ #Test data set Uses rows 1688 - 2410 from the normalized dataset and all the columns for the test dtaset
+BeersData_train <- BeersData_norm[1:1687, ] 
+BeersData_test <- BeersData_norm[1688:2410, ]
+
+#Target feature (Style) training data set uses rows 1 - 1687 and column 6 from theoriginal dataset
+#Target feature (Style) testing data set uses rows 1688 - 2410 and column 6 from the original dataset
+BeersData_train_target <- iris[1:1687, 6]
+BeersData_test_target <- iris[1688:2410, 6]
+
+#Load the class package
+require(class)
+
+
+#The knn algorithm receives the training, testing and training target data frmes. In addition to the k - a plce holder for how many neighbors we want the algorithm to use
+# A rule of thum is to set k = to the sqrt(total number of obs.) and preferably use an odd number to help knn break a potential tie
+
+sqrt(2410)
+
+# Generate a prediction fro the classification of all the values in the test dataframe
+m1 <- knn(train = BeersData_train, test = BeersData_test, cl=BeersData_train_target, k=50)
+
+#Use a confusion matrix to evaluate how well knn did at classifying those 21 flowers in the test data set
+#Use the target test data set in the X axis, and put m1 in the Y axis
+table(BeersData_test_target, m1) 
+
+#Values in the diagonal of the confusion matrix are the correctly predicted, off the diagonal are values incorrectly predicted
+# Target variables that categorical must be coded as factor in R for the KNN algorithm to be sucessful
+m1
+
+
+```
+
 >>>>>>> Stashed changes
