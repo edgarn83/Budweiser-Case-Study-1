@@ -41,6 +41,7 @@ BreweriesData %>% group_by(State) %>% summarise(n = n())
 
 ```
 
+
 ###Here we present a consolidated view of the beer data with the breweries data
 
 ```{r warnings = FALSE, cache=TRUE}
@@ -50,6 +51,7 @@ colnames(BeerWithBreweries)[colnames(BeerWithBreweries)=="Name.x"] <- "Beer_Name
 colnames(BeerWithBreweries)[colnames(BeerWithBreweries)=="Name.y"] <- "Brewery_Name"
 
 ```
+
 
 ## The first order of business once we have a clean data set is to discover what we can about this data.  We use exploratory data analysis for this purpose.
 ```{r eda, include=TRUE}
@@ -110,89 +112,47 @@ ggplot(BeersData, aes(x = Name, y = IBU)) +
 
 ```
 
+
 ### Based on this analysis,IBU has a linear relationship with ABV. However, there is unequal variance in between beers' IBU with lower and higher ABV.
 
 ### To address the Missing Values in each Column we chose to impute the NA value with the median of the existing variables, because IBU showed a strong positive correlation with BVA.
 
 ###Analysis Question Three
-The Missing Values are addressed before any additional data manipulation takes place so work does not have to be redone.
+##The Missing Values are addressed before any additional data manipulation takes place so work ##does not have to be redone.
 
 ```{r warnings = FALSE}
 #Address the Missing Values in Each Column
 #Copy Made to compare differences after Imputation
 BeersCopy = BeersData
+
 #Replace the NAs with the respective Medians
 MedianIBU <- median(BeersData$IBU, na.rm = TRUE)
 MedianABV <- median(BeersData$ABV, na.rm = TRUE) 
+
 #Replace IBU
 NAIndicesIBU = which(is.na(BeersData$IBU))
 for(i in NAIndicesIBU){
   BeersData$IBU[i] = MedianIBU
 }
+
 #ReplaceABV
 NAIndicesABV = which(is.na(BeersData$ABV))
 for(i in NAIndicesABV){
   BeersData$ABV[i] = MedianABV
 }
+
 #Example of replacing values with regression model
 BeersTemp = BeersCopy
 #this is an unimputed data set
 lmibu = lm(BeersTemp$IBU ~BeersTemp$ABV, data = BeersTemp)
 predicted = predict(lmibu, BeersTemp)
+
 NaTempIndices = which(is.na(BeersTemp$IBU))
 for(i in NaTempIndices){
   BeersTemp$IBU[i] = predicted[i]
 }
 ```
 
-
-```{r warnings = FALSE}
-#Address the Missing Values in Each Column
-
-lmibu = lm(BeersData$IBU ~BeersData$ABV, data = BeersData)
-#BeersData1 = BeersData %>% filter(!is.na(ABV) & is.na(IBU))
-BeersData$predictIBU = predict(lmibu,BeersData[,4])
-
-#Address the Missing Values in Each Column
-
-for(i in length(BeersData$IBU)){
-  if(is.na(BeersData$IBU[i])){
-  BeersData$IBU[i] <- BeersData$predictIBU[i]
-  }
-}
-
-```
-
-```{r}
-#Calculate the Median for IBU and BVA
-Medean.IBU <- median(BeersData$IBU, na.rm = TRUE)
-Median.ABV <- median(BeersData$ABV, na.rm = TRUE) 
-
-#Replace the NAs with the respective Medians
-BeersData$IBU[is.na(BeersData)]=Medean.IBU
-BeersData$ABV[is.na(BeersData$ABV)]=Median.ABV 
-
-for(i in length(BeersData$IBU)){
-  if(is.na(BeersData$IBU[i])){
-  BeersData$IBU[i] <- Medean.IBU
-  }
-}
-
-for(i in length(BeersData$ABV)){
-  if(is.na(BeersData$ABV[i])){
-  BeersData$ABV[i] <- Medean.IBU
-  }
-}
-
-BeersData$IBU[1] <- Medean.IBU
-
-#Verify NAs have been replaced
-Beersdf1 <- data.frame(BeersData %>% filter(is.na(IBU)))
-Beersdf1
-Beersdf.ABV_NA <- data.frame(BeersData %>% filter(is.na(ABV)))
-Beersdf.ABV_NA
-
-```
 
 ### Comparison of the median alcohol content and international bitterness unit (IBU) for each state
 
@@ -275,13 +235,13 @@ summary(BeersData_norm)
 #Create training and test data sets with 70:30 split
 #Training data set uses rows 1 - 1687 from the normalized dataset and all the columns for the train dataset
  #Test data set Uses rows 1688 - 2410 from the normalized dataset and all the columns for the test dtaset
-BeersData_train <- BeersData_norm[1:1687, ] 
+BeersData_train <- BeersData_norm[1:1687, ]
 BeersData_test <- BeersData_norm[1688:2410, ]
 
 #Target feature (Style) training data set uses rows 1 - 1687 and column 6 from theoriginal dataset
 #Target feature (Style) testing data set uses rows 1688 - 2410 and column 6 from the original dataset
-BeersData_train_target <- iris[1:1687, 6]
-BeersData_test_target <- iris[1688:2410, 6]
+BeersData_train_target <- BeersData[1:1687, 6]
+BeersData_test_target <- BeersData[1688:2410, 6]
 
 #Load the class package
 require(class)
