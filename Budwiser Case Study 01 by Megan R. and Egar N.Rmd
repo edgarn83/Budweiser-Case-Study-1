@@ -219,29 +219,40 @@ gp <- runif(nrow(BeersData))
 head(BeersData)
 BeersData <- BeersData[order(gp),] #Scramble the beers n the data set
 
-BeersData$Style <- as.factor(BeersData$Style)
-str(BeersData)
-summary(BeersData[, c(1, 2, 3, 4, 5)])
+#Remove rows with where Style is NA
+BeersData1 <- BeersData[!is.na(BeersData$Style),]
+
+#Convert the Style column to a factor, necessary for KNN
+BeersData1$Style <- as.factor(BeersData1$Style)
+str(BeersData1)
+summary(BeersData1[, c(1, 2, 3, 4, 5)])
 
 #Normalize numeric features (variable) to have similar scale
 normalize <- function(x) (x - min(x))/(max(x)-min(x))
-normalize(BeersData[, 2:5])
+normalize(BeersData1[, 2:5])
 
-BeersData_norm <- as.data.frame(lapply(BeersData[,c(2,3,4,5)], normalize))
-BeersData_norm$Style <- BeersData$Style
+BeersData_norm <- as.data.frame(lapply(BeersData1[,c(2,3,4,5)], normalize))
+BeersData_norm$Style <- BeersData1$Style
 str(BeersData_norm)
 summary(BeersData_norm)
 
 #Create training and test data sets with 70:30 split
 #Training data set uses rows 1 - 1687 from the normalized dataset and all the columns for the train dataset
  #Test data set Uses rows 1688 - 2410 from the normalized dataset and all the columns for the test dtaset
-BeersData_train <- BeersData_norm[1:1687, ]
-BeersData_test <- BeersData_norm[1688:2410, ]
+BeersData_train <- data.frame(BeersData_norm[1:1687, 1:4])
+BeersData_test <- data.frame(BeersData_norm[1688:2410, 1:4])     
+  
+BeersData_train <- filter(BeersData_train, !is.na(BeersData_train$IBU))
+BeersData_test <- filter(BeersData_test, !is.na(BeersData_test$IBU))
+#str(BeersData_train)
+#BeersData_train[!is.na(BeersData_train$IBU),]
 
 #Target feature (Style) training data set uses rows 1 - 1687 and column 6 from theoriginal dataset
 #Target feature (Style) testing data set uses rows 1688 - 2410 and column 6 from the original dataset
-BeersData_train_target <- BeersData[1:1687, 6]
-BeersData_test_target <- BeersData[1688:2410, 6]
+BeersData_train_target <- BeersData1[1:1687,6]
+BeersData_test_target <- BeersData1[1688:2410, 6]
+BeersData_train_target <- filter(BeersData_train_target, !is.na(BeersData_train_target$Style))
+BeersData_test_target <- filter(BeersData_test_target, !is.na(BeersData_test_target$Style))
 
 #Load the class package
 require(class)
@@ -252,7 +263,7 @@ require(class)
 
 sqrt(2410)
 
-# Generate a prediction fro the classification of all the values in the test dataframe
+# Generate a prediction from the classification of all the values in the test dataframe
 m1 <- knn(train = BeersData_train, test = BeersData_test, cl=BeersData_train_target, k=50)
 
 #Use a confusion matrix to evaluate how well knn did at classifying those 21 flowers in the test data set
