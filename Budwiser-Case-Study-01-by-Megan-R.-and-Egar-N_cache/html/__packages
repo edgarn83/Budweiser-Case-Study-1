@@ -10,3 +10,8 @@ stringr
 forcats
 GGally
 plyr
+ggthemes
+class
+lattice
+caret
+usmap
